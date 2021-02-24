@@ -4,6 +4,7 @@ services:
   influxdb:
     image: influxdb:latest
     container_name: influxdb
+    restart: always
     ports:
       - "8083:8083"
       - "8086:8086"
@@ -18,6 +19,7 @@ services:
   telegraf:
     image: telegraf:latest
     container_name: telegraf
+    restart: always
     links:
       - influxdb
     volumes:
@@ -26,6 +28,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    restart: always
     ports:
       - "3000:3000"
     links:
@@ -39,6 +42,7 @@ services:
       image: eclipse-mosquitto
       hostname: mosquitto
       container_name: mosquitto
+      restart: always
       ports:
         - "1883:1883"
         - "9001:9001"
