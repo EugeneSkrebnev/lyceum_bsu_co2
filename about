@@ -1,0 +1,7 @@
+project goal: setup co2 monitor system.
+- mqtt
+- docker
+- grafana
+- telegraph
+- raspberry pi
+- influxdb
