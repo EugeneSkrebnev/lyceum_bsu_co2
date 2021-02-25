@@ -43,6 +43,11 @@ services:
       hostname: mosquitto
       container_name: mosquitto
       restart: always
+      networks:
+        - default
+      expose:
+        - "1883"
+        - "9001"
       ports:
         - "1883:1883"
         - "9001:9001"
