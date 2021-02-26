@@ -24,10 +24,15 @@ services:
     restart: always
     networks:
       - default
-    links:
-      - influxdb
+    environment:
+      HOST_PROC: /rootfs/proc
+      HOST_SYS: /rootfs/sys
+      HOST_ETC: /rootfs/etc
     volumes:
       - ./telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /sys:/rootfs/sys:ro
+      - /proc:/rootfs/proc:ro
+      - /etc:/rootfs/etc:ro
 
   grafana:
     image: grafana/grafana:latest

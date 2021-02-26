@@ -15,7 +15,7 @@ if __name__ == '__main__':
     client.connect(host)
     while True:
         value = randint(0, 100)
-        client.publish("sensors/room112", value)
+        client.publish("sensors", ('temp,site=room1 value=' + str(value)))
         time.sleep(3)
 
 
