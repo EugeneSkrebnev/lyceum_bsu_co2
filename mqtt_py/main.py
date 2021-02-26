@@ -13,10 +13,11 @@ if __name__ == '__main__':
 # put your mosquitto adr here
     host = '192.168.1.84'
     client.connect(host)
+    x = 100
     while True:
-        value = randint(0, 100)
-        client.publish("sensors", ('temp,site=room1 value=' + str(value)))
-        time.sleep(3)
+        x = x + randint(-10, 10)
+        client.publish("sensors", ('sensors,site=room1 value=' + str(x)))
+        time.sleep(1)
 
 
 
