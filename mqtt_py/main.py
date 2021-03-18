@@ -14,6 +14,7 @@ if __name__ == '__main__':
     host = '192.168.1.84'
     client.connect(host)
     x = 100
+
     while True:
         x = x + randint(-10, 10)
         client.publish("sensors", ('sensors,site=room1 value=' + str(x)))
