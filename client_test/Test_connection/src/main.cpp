@@ -6,7 +6,6 @@
 #include "SSD1306AsciiWire.h"
 #include "Сredentials.h"
 
-//#include <ESP8266WiFiMulti.h>
 #include  <ESP8266WiFi.h>
 
 #include <InfluxDbClient.h>
@@ -22,13 +21,10 @@ extern "C" {
 //ESP8266WiFiMulti wifiMulti;
 #define I2C_ADDRESS 0x3C
 
-SSD1306AsciiWire oled;
+SSD1306AsciiWire oled; //D1 D2
 SoftwareSerial co2Serial(D5, D6); // RX, TX
 InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN, InfluxDbCloud2CACert);
-Point sensor_co2("makeit_co2");
 
-// Point sensor_wifi("makeit_wifi");
-// Point sensor_temp("makeit_temp");
 
 int readCO2() { 
   byte cmd[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
@@ -86,9 +82,6 @@ void setupWifiEnterprise() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
 
-  Point sensor("wifi_status");
-  sensor.addTag("device", DEVICE);
-  sensor.addTag("SSID", WiFi.SSID());
   timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
     // Check server connection
   if (client.validateConnection()) {
@@ -121,44 +114,51 @@ void setup() {
   oled.set400kHz();  
   oled.setFont(Verdana12_bold);    
   oled.clear();  
-  oled.println("Screen works okay");
+  oled.println("Welcome, this is a");
+  oled.println("Temp and CO2 sensor");
+  oled.println("Connecting to wifi...");
+  oled.println("Connecting to iot...");
+
+  oled.setFont(CalLite24);
   setupWifiEnterprise();
 }
 
-void setupInflux() {
-  
-
+void submitToDB(String measurement, String device, int value) {
+  Point data_point(measurement);
+  data_point.addTag("device", device);
+  data_point.addField(measurement, value);
+  if (!client.writePoint(data_point)) {
+      Serial.print("InfluxDB write failed: ");
+      Serial.println(client.getLastErrorMessage());
+    }
+  Serial.print("Writing: ");
+  Serial.println(data_point.toLineProtocol());
 }
 
 // the loop function runs over and over again forever
 void loop() {
   oled.clear();    
   
+  int wifi = WiFi.RSSI();
+  submitToDB("WIFI_RSSI", DEVICE, wifi);
+  
   int co2 = readCO2();
   int temp = readTempInC();
   
-  sensor_co2.clearFields();
-  // sensor_temp.clearFields();
-  // sensor_wifi.clearFields();
-
-  sensor_co2.addField("co2", co2);
-  // sensor_temp.addField("temp", temp);
-  // sensor_wifi.addField("rssi", WiFi.RSSI());
-
-  Serial.print("Writing: ");
-  Serial.println(sensor_co2.toLineProtocol());
-
-  // Write point
   if (co2 != -1) {
-    if (!client.writePoint(sensor_co2)) {
-      Serial.print("InfluxDB write failed: ");
-      Serial.println(client.getLastErrorMessage());
-    }
+    submitToDB("CO2", DEVICE, co2);
   }
-  
 
-  oled.println(co2);
-  oled.println(temp);
+  if (temp != -1) {
+    submitToDB("TEMP", DEVICE, temp);
+  }
+
+  if ((temp != -1) && (co2 != -1)) {
+    String co2_str = "CO2 : " + String(co2);
+    oled.println(co2_str);
+    String temp_str = "T : " + String(temp) + " C";
+    oled.println(temp_str);
+  }
 
   Serial.println("Wait 10s");
   delay(10000);
