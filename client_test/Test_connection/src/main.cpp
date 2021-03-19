@@ -4,10 +4,14 @@
 #include "SoftwareSerial.h"
 #include "SSD1306Ascii.h"
 #include "SSD1306AsciiWire.h"
-
+#include "Сredentials.h"
 
 //#include <ESP8266WiFiMulti.h>
 #include  <ESP8266WiFi.h>
+
+#include <InfluxDbClient.h>
+#include <InfluxDbCloud.h>
+
 
 extern "C" {
 #include "user_interface.h"
@@ -20,15 +24,11 @@ extern "C" {
 
 SSD1306AsciiWire oled;
 SoftwareSerial co2Serial(D5, D6); // RX, TX
+InfluxDBClient client(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN, InfluxDbCloud2CACert);
+Point sensor_co2("makeit_co2");
 
-char ssid[] = "BSULyceum";
-char username[] = "Skrebnev";
-char identity[] = "Skrebnev";
-char password[] = "";
-uint8_t target_esp_sensor_mac[6] = {0x24, 0x0a, 0xc4, 0x9a, 0x58, 0x28};
-
-
-
+// Point sensor_wifi("makeit_wifi");
+// Point sensor_temp("makeit_temp");
 
 int readCO2() { 
   byte cmd[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};
@@ -45,7 +45,6 @@ int readCO2() {
 
 
 void setupWifiEnterprise() {
-
   WiFi.mode(WIFI_STA);
   delay(1000);
   Serial.setDebugOutput(true);
@@ -56,7 +55,6 @@ void setupWifiEnterprise() {
   wifi_set_opmode(STATION_MODE);
 
   struct station_config wifi_config;
-
   memset(&wifi_config, 0, sizeof(wifi_config));
   strcpy((char*)wifi_config.ssid, ssid);
   strcpy((char*)wifi_config.password, password);
@@ -64,7 +62,6 @@ void setupWifiEnterprise() {
   wifi_station_set_config(&wifi_config);
   wifi_set_macaddr(STATION_IF, target_esp_sensor_mac);
   
-
   wifi_station_set_wpa2_enterprise_auth(1);
 
   // Clean up to be sure no old data is still inside
@@ -79,7 +76,6 @@ void setupWifiEnterprise() {
   wifi_station_set_enterprise_username((uint8*)username, strlen(username));
   wifi_station_set_enterprise_password((uint8*)password, strlen((char*)password));
 
-  
   wifi_station_connect();
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -89,6 +85,19 @@ void setupWifiEnterprise() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+
+  Point sensor("wifi_status");
+  sensor.addTag("device", DEVICE);
+  sensor.addTag("SSID", WiFi.SSID());
+  timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
+    // Check server connection
+  if (client.validateConnection()) {
+    Serial.print("Connected to InfluxDB: ");
+    Serial.println(client.getServerUrl());
+  } else {
+    Serial.print("InfluxDB connection failed: ");
+    Serial.println(client.getLastErrorMessage());
+  }
 }
 
 int readTempInC() { 
@@ -116,11 +125,41 @@ void setup() {
   setupWifiEnterprise();
 }
 
+void setupInflux() {
+  
+
+}
 
 // the loop function runs over and over again forever
 void loop() {
-  oled.clear();                       
-  oled.println(readCO2());
-  oled.println(readTempInC());
-  delay(12000);  
+  oled.clear();    
+  
+  int co2 = readCO2();
+  int temp = readTempInC();
+  
+  sensor_co2.clearFields();
+  // sensor_temp.clearFields();
+  // sensor_wifi.clearFields();
+
+  sensor_co2.addField("co2", co2);
+  // sensor_temp.addField("temp", temp);
+  // sensor_wifi.addField("rssi", WiFi.RSSI());
+
+  Serial.print("Writing: ");
+  Serial.println(sensor_co2.toLineProtocol());
+
+  // Write point
+  if (co2 != -1) {
+    if (!client.writePoint(sensor_co2)) {
+      Serial.print("InfluxDB write failed: ");
+      Serial.println(client.getLastErrorMessage());
+    }
+  }
+  
+
+  oled.println(co2);
+  oled.println(temp);
+
+  Serial.println("Wait 10s");
+  delay(10000);
 }
