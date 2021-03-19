@@ -1,7 +1,7 @@
 # lyceum_bsu_co2
 co2 monitoring project
 
-the goal of the project is to gain basic knowledge in
+the goal of the project is to gain basic knowledge in iot and primitive pcb designing, 
 - mqtt
 - tasmota?
 - docker
