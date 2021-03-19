@@ -156,7 +156,7 @@ void loop() {
   if ((temp != -1) && (co2 != -1)) {
     String co2_str = "CO2 : " + String(co2);
     oled.println(co2_str);
-    String temp_str = "T : " + String(temp) + " C";
+    String temp_str = "   T : " + String(temp) + " C";
     oled.println(temp_str);
   }
 
